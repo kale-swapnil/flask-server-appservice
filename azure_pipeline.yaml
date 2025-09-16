@@ -1,0 +1,71 @@
+trigger: 
+  - main
+pool:
+  vmImage: 'ubuntu-latest'
+variables:
+  azureServiceConnection: 'AzureServiceConnection'
+  projectRoot: ${System.DefaultWorkingDirectory}
+  pythonVersion: '3.8'
+  webappName: 'simple-flask-server-appservice'
+
+stages:
+  - stage: Build
+    displayName: Build stage
+    jobs:
+      - job: BuildJob
+        steps:
+        - task: UsePythonVersion@0
+          inputs:
+            versionSpec: '$(pythonVersion)'
+          displayName: 'Use Python $(pythonVersion)'
+
+        - script: |
+            python -m venv .venv
+            source .venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
+          workingDirectory: '$(projectRoot)'
+          displayName: 'Install requirements'
+
+        - task: ArchiveFiles@2
+          inputs:
+            rootFolderOrFile: '$(projectRoot)'
+            includeRootFolder: false
+            archiveType: 'zip'
+            archiveFile: '$(Build.ArtifactStagingDirectory)/flaskapp.zip'
+            replaceExistingArchive: true
+          displayName: 'Archive files'
+
+        - upload: '$(Build.ArtifactStagingDirectory)/flaskapp.zip'
+          artifact: 'flaskapp'
+          displayName: 'Publish Artifact'
+
+  - stage: Deploy
+    displayName: Deploy stage
+    dependsOn: Build
+    condition: succeeded()
+    jobs:
+    - deployment: DeploymentJob
+      environment: 'flaskapp-env'
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            - download: current
+              artifact: flaskapp
+              displayName: 'Download Artifact'
+
+            - task: UsePythonVersion@0
+              inputs:
+                versionSpec: '$(pythonVersion)'
+              displayName: 'Use Python $(pythonVersion)'
+
+            - task: AzureWebApp@1
+              displayName: 'Azure Web App Deploy'
+              inputs:
+                azureSubscription: '$(azureServiceConnection)'
+                appName: '$(webappName)'
+                package: '$(Pipeline.Workspace)/flaskapp/flaskapp.zip'
+                appType: 'webAppLinux'
+
+    

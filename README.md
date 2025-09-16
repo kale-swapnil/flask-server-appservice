@@ -13,7 +13,7 @@ urlFragment: simple-flask-server-appservice
 
 # Deployment using Terraform
 
-In this repository you can find the Terraform to deploy the infrastructure for the Python Flask Website
+In this repository you can find the Terraform to deploy the infrastructure and azure CI/CD pipeline to automate the deployment for the Python Flask Website
 
 # Simple Flask App on Azure App Service
 
