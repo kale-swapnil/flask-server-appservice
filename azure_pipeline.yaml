@@ -1,11 +1,13 @@
 trigger: 
   - main
+
 pool:
   vmImage: 'ubuntu-latest'
+  
 variables:
   azureServiceConnection: 'AzureServiceConnection'
-  projectRoot: ${System.DefaultWorkingDirectory}
-  pythonVersion: '3.8'
+  projectRoot: $(System.DefaultWorkingDirectory)
+  pythonVersion: '3.9'
   webappName: 'simple-flask-server-appservice'
 
 stages:
@@ -19,10 +21,15 @@ stages:
             versionSpec: '$(pythonVersion)'
           displayName: 'Use Python $(pythonVersion)'
 
+        - script: | 
+            echo Working Directory: '$(System.DefaultWorkingDirectory)'
+          displayName: ‘Print Working Directory’
+
         - script: |
             python -m venv .venv
             source .venv/bin/activate
             pip install --upgrade pip
+            pip install setup
             pip install -r requirements.txt
           workingDirectory: '$(projectRoot)'
           displayName: 'Install requirements'
@@ -40,32 +47,30 @@ stages:
           artifact: 'flaskapp'
           displayName: 'Publish Artifact'
 
-  - stage: Deploy
-    displayName: Deploy stage
-    dependsOn: Build
-    condition: succeeded()
-    jobs:
-    - deployment: DeploymentJob
-      environment: 'flaskapp-env'
-      strategy:
-        runOnce:
-          deploy:
-            steps:
-            - download: current
-              artifact: flaskapp
-              displayName: 'Download Artifact'
+  # - stage: Deploy
+  #   displayName: Deploy stage
+  #   dependsOn: Build
+  #   condition: succeeded()
+  #   jobs:
+  #   - deployment: DeploymentJob
+  #     environment: 'flaskapp-env'
+  #     strategy:
+  #       runOnce:
+  #         deploy:
+  #           steps:
+  #           - download: current
+  #             artifact: flaskapp
+  #             displayName: 'Download Artifact'
 
-            - task: UsePythonVersion@0
-              inputs:
-                versionSpec: '$(pythonVersion)'
-              displayName: 'Use Python $(pythonVersion)'
+  #           - task: UsePythonVersion@0
+  #             inputs:
+  #               versionSpec: '$(pythonVersion)'
+  #             displayName: 'Use Python $(pythonVersion)'
 
-            - task: AzureWebApp@1
-              displayName: 'Azure Web App Deploy'
-              inputs:
-                azureSubscription: '$(azureServiceConnection)'
-                appName: '$(webappName)'
-                package: '$(Pipeline.Workspace)/flaskapp/flaskapp.zip'
-                appType: 'webAppLinux'
-
-    
+  #           - task: AzureWebApp@1
+  #             displayName: 'Azure Web App Deploy'
+  #             inputs:
+  #               azureSubscription: '$(azureServiceConnection)'
+  #               appName: '$(webappName)'
+  #               package: '$(Pipeline.Workspace)/flaskapp/flaskapp.zip'
+  #               appType: 'webAppLinux'
